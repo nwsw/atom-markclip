@@ -8,8 +8,16 @@ PKG = require '../package.json'
 TAG_TEXT_EDITOR = 'ATOM-TEXT-EDITOR'
 SAVE_TYPE_BASE64 = 'base64'
 SAVE_TYPE_FILE = 'file'
+SAVE_TYPE_FNAME_DERIVATIVE = 'file#num'
 SAVE_TYPE_FILE_IN_FOLDER = 'file in folder'
 FILE_EXT = ['.md', '.markdown', '.mdown', '.mkd', '.mkdown']
+
+statSyncNoException = (pathToCheck) ->
+   try
+      fs.statSync(pathToCheck)
+   catch error
+      false
+
 
 module.exports = Markclip =
   config:
@@ -17,7 +25,7 @@ module.exports = Markclip =
       type: 'string'
       description: 'Where to save the clipboard image file'
       default: SAVE_TYPE_BASE64
-      enum: [SAVE_TYPE_BASE64, SAVE_TYPE_FILE, SAVE_TYPE_FILE_IN_FOLDER]
+      enum: [SAVE_TYPE_BASE64, SAVE_TYPE_FILE, SAVE_TYPE_FNAME_DERIVATIVE, SAVE_TYPE_FILE_IN_FOLDER]
 
   handleCtrlVEvent: () ->
     textEditor = atom.workspace.getActiveTextEditor()
@@ -42,18 +50,24 @@ module.exports = Markclip =
     return if FILE_EXT.indexOf(filePathObj.ext) < 0
 
     saveType = atom.config.get('markclip.saveType')
-    # IF:saveType: save as a file
-    if (saveType == SAVE_TYPE_FILE_IN_FOLDER || saveType == SAVE_TYPE_FILE)
+    # IF: save as a file
+    if (saveType != SAVE_TYPE_BASE64)
       imgFileDir = filePathObj.dir
-      # IF:saveType: SAVE IN FOLDER, create it
+      # IF: SAVE IN FOLDER, create it
       if saveType == SAVE_TYPE_FILE_IN_FOLDER
         imgFileDir = path.join(imgFileDir, filePathObj.name)
         mkdirp.sync(imgFileDir)
       # create file with md5 name
       imgFilePath = path.join(imgFileDir, md5(img.toDataUrl()).replace('=', '') + '.png')
+      if saveType == SAVE_TYPE_FNAME_DERIVATIVE
+         fcounter = 0
+         while statSyncNoException(imgFilePath) or (fcounter < 1) 
+            fcounter += 1
+            imgFilePath = path.join(imgFileDir, filePathObj.name + fcounter + '.png')
+
       fs.writeFileSync(imgFilePath, img.toPng());
       @insertImgIntoEditor(textEditor, path.relative(filePathObj.dir, imgFilePath))
-    # IF:saveType: save as base64
+    # IF: save as base64
     else
       @insertImgIntoEditor(textEditor, img.toDataUrl())
 
