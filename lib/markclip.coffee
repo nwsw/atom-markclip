@@ -63,7 +63,7 @@ module.exports = Markclip =
          fcounter = 0
          while statSyncNoException(imgFilePath) or (fcounter < 1) 
             fcounter += 1
-            imgFilePath = path.join(imgFileDir, filePathObj.name + fcounter + '.png')
+            imgFilePath = path.join(imgFileDir, filePathObj.name + '-' + fcounter + '.png')
 
       fs.writeFileSync(imgFilePath, img.toPng());
       @insertImgIntoEditor(textEditor, path.relative(filePathObj.dir, imgFilePath))
